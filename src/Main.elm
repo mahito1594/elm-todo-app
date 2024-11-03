@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
 import Html exposing (..)
@@ -6,15 +6,17 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy)
+import Json.Decode as D
+import Json.Encode as E
 
 
-main : Program () Model Msg
+main : Program E.Value Model Msg
 main =
     Browser.element
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -25,7 +27,6 @@ main =
 type alias Model =
     { input : String
     , items : List TodoItem
-    , nextId : ItemId
     }
 
 
@@ -40,9 +41,21 @@ type alias ItemId =
     Int
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { items = [], input = "", nextId = 0 }, Cmd.none )
+init : E.Value -> ( Model, Cmd Msg )
+init flags =
+    let
+        items : List TodoItem
+        items =
+            case D.decodeValue (D.list decoder) flags of
+                Ok todoItems ->
+                    todoItems
+
+                Err _ ->
+                    []
+    in
+    ( { items = items, input = "" }
+    , Cmd.none
+    )
 
 
 
@@ -52,6 +65,7 @@ init _ =
 type Msg
     = InputDescription String
     | AddItem
+    | ItemSaved (Result D.Error TodoItem)
     | MarkAsDone ItemId
     | MarkAsUndone ItemId
 
@@ -63,13 +77,21 @@ update msg model =
             ( { model | input = input }, Cmd.none )
 
         AddItem ->
-            ( { model
-                | input = ""
-                , items = { id = model.nextId, description = model.input, done = False } :: model.items
-                , nextId = model.nextId + 1
-              }
-            , Cmd.none
+            ( model
+            , addNewTodoItem
+                (E.object
+                    [ ( "description", E.string model.input )
+                    , ( "done", E.bool False )
+                    ]
+                )
             )
+
+        ItemSaved (Ok item) ->
+            ( { model | input = "", items = item :: model.items }, Cmd.none )
+
+        -- TODO: Add handling for parse errors
+        ItemSaved (Err _) ->
+            ( model, Cmd.none )
 
         MarkAsDone itemId ->
             let
@@ -102,6 +124,15 @@ update msg model =
               }
             , Cmd.none
             )
+
+
+
+-- SUBSCTIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    newItemReciever (D.decodeValue decoder) |> Sub.map ItemSaved
 
 
 
@@ -165,3 +196,25 @@ viewItem item =
                 ]
     in
     ( String.fromInt item.id, lazy viewArticle item )
+
+
+
+-- Ports
+
+
+port addNewTodoItem : E.Value -> Cmd msg
+
+
+port newItemReciever : (E.Value -> msg) -> Sub msg
+
+
+
+-- JSON Encode/Decode
+
+
+decoder : D.Decoder TodoItem
+decoder =
+    D.map3 TodoItem
+        (D.field "id" D.int)
+        (D.field "description" D.string)
+        (D.field "done" D.bool)
