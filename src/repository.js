@@ -36,3 +36,13 @@ export const addTodo = async (todo) => {
   const db = await useDB();
   return db.add("todos", todo);
 };
+
+/**
+ * Delete a todo from the database
+ *
+ * @param {number} id id of the todo to delete
+ */
+export const deleteTodo = async (id) => {
+  const db = await useDB();
+  return db.delete("todos", id);
+};

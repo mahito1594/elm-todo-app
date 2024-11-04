@@ -68,6 +68,7 @@ type Msg
     | ItemSaved (Result D.Error TodoItem)
     | MarkAsDone ItemId
     | MarkAsUndone ItemId
+    | DeleteItem ItemId
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -125,6 +126,9 @@ update msg model =
             , Cmd.none
             )
 
+        DeleteItem itemId ->
+            ( { model | items = List.filter (\item -> item.id /= itemId) model.items }, deleteTodoItem itemId )
+
 
 
 -- SUBSCTIPTIONS
@@ -165,17 +169,17 @@ viewItem item =
             else
                 text itm.description
 
-        clickHandler : TodoItem -> Msg
-        clickHandler itm =
+        doneClickHandler : TodoItem -> Msg
+        doneClickHandler itm =
             if itm.done then
                 MarkAsUndone itm.id
 
             else
                 MarkAsDone itm.id
 
-        viewButton : TodoItem -> Html Msg
-        viewButton itm =
-            button [ class "outline", onClick (clickHandler itm) ]
+        viewDoneButton : TodoItem -> Html Msg
+        viewDoneButton itm =
+            button [ class "outline", onClick (doneClickHandler itm) ]
                 [ text
                     (if itm.done then
                         "Undone"
@@ -185,13 +189,22 @@ viewItem item =
                     )
                 ]
 
+        viewDeleteButton : TodoItem -> Html Msg
+        viewDeleteButton itm =
+            button
+                [ classList [ ( "outline", True ), ( "contrast", True ) ]
+                , onClick (DeleteItem itm.id)
+                ]
+                [ text "Delete" ]
+
         viewArticle : TodoItem -> Html Msg
         viewArticle itm =
             article
                 []
                 [ viewDescription itm
                 , footer []
-                    [ viewButton itm
+                    [ viewDoneButton itm
+                    , viewDeleteButton itm
                     ]
                 ]
     in
@@ -203,6 +216,9 @@ viewItem item =
 
 
 port addNewTodoItem : E.Value -> Cmd msg
+
+
+port deleteTodoItem : ItemId -> Cmd msg
 
 
 port newItemReciever : (E.Value -> msg) -> Sub msg

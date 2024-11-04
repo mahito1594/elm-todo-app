@@ -1,5 +1,5 @@
 import "@picocss/pico";
-import { addTodo, getAllTodos } from "./repository";
+import { addTodo, deleteTodo, getAllTodos } from "./repository";
 import { Elm } from "./Main.elm";
 
 const main = async () => {
@@ -12,6 +12,10 @@ const main = async () => {
   app.ports.addNewTodoItem.subscribe(async (todo) => {
     const id = await addTodo(todo);
     app.ports.newItemReciever.send({ ...todo, id });
+  });
+
+  app.ports.deleteTodoItem.subscribe(async (id) => {
+    await deleteTodo(id);
   });
 };
 
