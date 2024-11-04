@@ -6,7 +6,7 @@ const main = async () => {
   const savedTodos = await getAllTodos();
   const app = Elm.Main.init({
     node: document.getElementById("app"),
-    flags: savedTodos,
+    flags: savedTodos.sort((a, b) => b.id - a.id),
   });
 
   app.ports.addNewTodoItem.subscribe(async (todo) => {
