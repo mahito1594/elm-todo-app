@@ -203,8 +203,10 @@ viewItem item =
                 []
                 [ viewDescription itm
                 , footer []
-                    [ viewDoneButton itm
-                    , viewDeleteButton itm
+                    [ div [ class "grid" ]
+                        [ viewDoneButton itm
+                        , viewDeleteButton itm
+                        ]
                     ]
                 ]
     in
