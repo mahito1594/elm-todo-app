@@ -66,8 +66,8 @@ type Msg
     = InputDescription String
     | AddItem
     | ItemSaved (Result D.Error TodoItem)
-    | MarkAsDone ItemId
-    | MarkAsUndone ItemId
+    | ToggleStatus TodoItem
+    | StatusToggled ItemId
     | DeleteItem ItemId
 
 
@@ -94,34 +94,33 @@ update msg model =
         ItemSaved (Err _) ->
             ( model, Cmd.none )
 
-        MarkAsDone itemId ->
-            let
-                done : ItemId -> TodoItem -> TodoItem
-                done id item =
-                    if item.id == id then
-                        { item | done = True }
-
-                    else
-                        item
-            in
-            ( { model
-                | items = List.map (done itemId) model.items
-              }
-            , Cmd.none
+        ToggleStatus item ->
+            ( model
+            , toggleStatus
+                (E.object
+                    [ ( "id", E.int item.id )
+                    , ( "description", E.string item.description )
+                    , ( "done", E.bool <| not item.done )
+                    ]
+                )
             )
 
-        MarkAsUndone itemId ->
+        StatusToggled itemId ->
             let
-                undone : ItemId -> TodoItem -> TodoItem
-                undone id item =
-                    if item.id == id then
-                        { item | done = False }
+                toggleAt : Int -> List TodoItem -> List TodoItem
+                toggleAt id items =
+                    List.map
+                        (\item ->
+                            if item.id == id then
+                                { item | done = not item.done }
 
-                    else
-                        item
+                            else
+                                item
+                        )
+                        items
             in
             ( { model
-                | items = List.map (undone itemId) model.items
+                | items = toggleAt itemId model.items
               }
             , Cmd.none
             )
@@ -136,7 +135,10 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    newItemReciever (D.decodeValue decoder) |> Sub.map ItemSaved
+    Sub.batch
+        [ newItemReciever (D.decodeValue decoder) |> Sub.map ItemSaved
+        , toggleStatusReciever StatusToggled
+        ]
 
 
 
@@ -169,17 +171,9 @@ viewItem item =
             else
                 text itm.description
 
-        doneClickHandler : TodoItem -> Msg
-        doneClickHandler itm =
-            if itm.done then
-                MarkAsUndone itm.id
-
-            else
-                MarkAsDone itm.id
-
-        viewDoneButton : TodoItem -> Html Msg
-        viewDoneButton itm =
-            button [ class "outline", onClick (doneClickHandler itm) ]
+        viewStatusToggleButton : TodoItem -> Html Msg
+        viewStatusToggleButton itm =
+            button [ class "outline", onClick (ToggleStatus itm) ]
                 [ text
                     (if itm.done then
                         "Undone"
@@ -204,7 +198,7 @@ viewItem item =
                 [ viewDescription itm
                 , footer []
                     [ div [ class "grid" ]
-                        [ viewDoneButton itm
+                        [ viewStatusToggleButton itm
                         , viewDeleteButton itm
                         ]
                     ]
@@ -220,10 +214,16 @@ viewItem item =
 port addNewTodoItem : E.Value -> Cmd msg
 
 
+port toggleStatus : E.Value -> Cmd msg
+
+
 port deleteTodoItem : ItemId -> Cmd msg
 
 
 port newItemReciever : (E.Value -> msg) -> Sub msg
+
+
+port toggleStatusReciever : (ItemId -> msg) -> Sub msg
 
 
 

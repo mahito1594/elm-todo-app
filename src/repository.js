@@ -38,6 +38,17 @@ export const addTodo = async (todo) => {
 };
 
 /**
+ * Update a todo in the database
+ *
+ * @param {Todo} todo todo item to update
+ * @returns {Promise<number>} id of the updated todo
+ */
+export const updateTodo = async (todo) => {
+  const db = await useDB();
+  return db.put("todos", todo);
+};
+
+/**
  * Delete a todo from the database
  *
  * @param {number} id id of the todo to delete
