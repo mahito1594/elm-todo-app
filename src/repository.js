@@ -1,7 +1,7 @@
 import { openDB } from "idb";
 
 const useDB = async () => {
-  const db = await openDB("todo-store", 1, {
+  const db = await openDB("elm-todo-app-store", 1, {
     upgrade(db) {
       db.createObjectStore("todos", { keyPath: "id", autoIncrement: true });
     },
